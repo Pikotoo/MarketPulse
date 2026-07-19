@@ -26,7 +26,7 @@ from api.day_reader import read_macro_series, get_macro_value
 from api.signals.pe import compute_pe_percentile, _load_pe_data
 
 
-def _get_bond_yield(code: str = "CNG10Y") -> Optional[float]:
+def _get_bond_yield(code: str = "CNDTY") -> Optional[float]:
     """获取10年期国债收益率"""
     try:
         val = get_macro_value(code)
@@ -35,8 +35,8 @@ def _get_bond_yield(code: str = "CNG10Y") -> Optional[float]:
     except Exception:
         pass
 
-    # 尝试其他代码
-    for alt in ["CNDT10Y", "CNT10Y", "CNDTFY"]:
+    # 尝试其他代码（按优先级）
+    for alt in ["CNDTFY", "CNDT7Y"]:
         try:
             val = get_macro_value(alt)
             if val is not None:
@@ -174,7 +174,7 @@ def _erp_latest() -> dict:
 
 def _get_bond_yield_at(as_of: pd.Timestamp) -> Optional[float]:
     """获取指定日期的 10 年国债收益率（从历史 .day 文件中读取）"""
-    for code in ["CNG10Y", "CNDT10Y", "CNT10Y", "CNDTFY"]:
+    for code in ["CNDTY", "CNDTFY", "CNDT7Y"]:
         try:
             df = read_macro_series(code)
             if df is None or len(df) == 0:
@@ -226,7 +226,7 @@ def _erp_history(days: int) -> dict:
 
     # 预加载债券收益率历史（避免逐行重复读文件）
     bond_history = None
-    for code in ["CNG10Y", "CNDT10Y", "CNT10Y", "CNDTFY"]:
+    for code in ["CNDTY", "CNDTFY", "CNDT7Y"]:
         try:
             bond_history = read_macro_series(code)
             if bond_history is not None and len(bond_history) > 0:

@@ -56,7 +56,7 @@ def _score_stock_bond(as_of=None, _pe_data=None) -> dict:
     """股债相对强度 — 10Y国债收益率变化方向 vs 股市表现"""
     try:
         # 10Y 国债收益率 3个月变化（收益率上升=债跌）
-        bond_yoy = _yoy("CNG10Y", as_of=as_of) or _yoy("CNDT10Y", as_of=as_of)
+        bond_yoy = _yoy("CNDTY", as_of=as_of)  # 10Y 国债收益率
         pe_change = _get_pe_change_3m(as_of=as_of, _pe_data=_pe_data)
 
         if bond_yoy is not None and pe_change is not None:

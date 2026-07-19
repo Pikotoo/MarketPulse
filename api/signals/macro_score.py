@@ -71,8 +71,8 @@ def _score_shibor(as_of=None):
 
 
 def _score_spread(as_of=None):
-    y10 = _val("CNG10Y", as_of) or _val("CNDT10Y", as_of)
-    y2 = _val("CNG2Y", as_of) or _val("CNDT2Y", as_of) or _val("CNDT5Y", as_of)
+    y10 = _val("CNDTY", as_of)  # 10Y 国债
+    y2 = _val("CNDTTY", as_of) or _val("CNDTFY", as_of)  # 2Y/5Y 国债
     if y10 is None or y2 is None: return dict(_EMPTY)
     spread = y10 - y2
     s = _norm(spread, 0.3, 2.5)
