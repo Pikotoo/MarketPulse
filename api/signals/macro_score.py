@@ -138,13 +138,13 @@ def _score_fdi(as_of=None):
 # ── 综合评分 ──────────────────────────────────────────────
 
 def _interpret(score):
-    if score < 20: return "[算法输出] 宏观环境极度寒冷"
-    if score < 35: return "[算法输出] 宏观环境偏冷"
-    if score < 45: return "[算法输出] 宏观环境中性偏冷"
-    if score < 55: return "[算法输出] 宏观环境中性"
-    if score < 65: return "[算法输出] 宏观环境中性偏暖"
-    if score < 80: return "[算法输出] 宏观环境偏暖"
-    return "[算法输出] 宏观环境火热"
+    if score < 20: return "宏观环境极度寒冷"
+    if score < 35: return "宏观环境偏冷"
+    if score < 45: return "宏观环境中性偏冷"
+    if score < 55: return "宏观环境中性"
+    if score < 65: return "宏观环境中性偏暖"
+    if score < 80: return "宏观环境偏暖"
+    return "宏观环境火热"
 
 
 def _compute(as_of=None):

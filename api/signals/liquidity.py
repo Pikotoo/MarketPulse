@@ -88,12 +88,12 @@ def _score_mlf_lpr(as_of=None):
 
 
 def _interpret(score):
-    if score < 25: return "[算法输出] 流动性极度紧张"
-    elif score < 40: return "[算法输出] 流动性偏紧"
-    elif score < 55: return "[算法输出] 流动性中性"
-    elif score < 70: return "[算法输出] 流动性偏宽松"
-    elif score < 85: return "[算法输出] 流动性宽松"
-    return "[算法输出] 流动性极度宽松"
+    if score < 25: return "流动性极度紧张"
+    elif score < 40: return "流动性偏紧"
+    elif score < 55: return "流动性中性"
+    elif score < 70: return "流动性偏宽松"
+    elif score < 85: return "流动性宽松"
+    return "流动性极度宽松"
 
 
 def _liquidity_history(days: int) -> dict:

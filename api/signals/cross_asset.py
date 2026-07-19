@@ -107,11 +107,11 @@ def _score_rmb_trend(as_of=None) -> dict:
 
 
 def _interpret(score):
-    if score < 30: return "[算法输出] Risk Off——避险资产全面占优"
-    elif score < 45: return "[算法输出] 偏 Risk Off——资金偏向避险"
-    elif score < 55: return "[算法输出] 均衡——多资产无明显偏向"
-    elif score < 70: return "[算法输出] 偏 Risk On——风险资产略占优"
-    else: return "[算法输出] Risk On——风险资产全面占优"
+    if score < 30: return "Risk Off——避险资产全面占优"
+    elif score < 45: return "偏 Risk Off——资金偏向避险"
+    elif score < 55: return "均衡——多资产无明显偏向"
+    elif score < 70: return "偏 Risk On——风险资产略占优"
+    else: return "Risk On——风险资产全面占优"
 
 
 def _cross_asset_history(days: int) -> dict:

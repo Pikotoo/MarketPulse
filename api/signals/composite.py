@@ -138,19 +138,19 @@ def _score_volume(as_of=None) -> Optional[float]:
 
 def _interpret(score: float) -> str:
     if score < 15:
-        return "[算法输出] 极度悲观——估值便宜但市场恐慌"
+        return "极度悲观——估值便宜但市场恐慌"
     elif score < 30:
-        return "[算法输出] 偏悲观——市场信心不足"
+        return "偏悲观——市场信心不足"
     elif score < 45:
-        return "[算法输出] 中性偏冷——机会隐现但风险仍存"
+        return "中性偏冷——机会隐现但风险仍存"
     elif score < 55:
-        return "[算法输出] 中性——市场不冷不热"
+        return "中性——市场不冷不热"
     elif score < 70:
-        return "[算法输出] 中性偏暖——市场情绪向好"
+        return "中性偏暖——市场情绪向好"
     elif score < 85:
-        return "[算法输出] 偏乐观——多数维度向好"
+        return "偏乐观——多数维度向好"
     else:
-        return "[算法输出] 过度乐观——估值偏高，需警惕回撤"
+        return "过度乐观——估值偏高，需警惕回撤"
 
 
 def get_composite_score(days: int = 0) -> dict:

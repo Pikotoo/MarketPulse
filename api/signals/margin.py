@@ -128,17 +128,17 @@ def _score_rz_trend(df: Optional[pd.DataFrame]) -> dict:
 
 def _interpret(score: float) -> str:
     if score < 20:
-        return "[算法输出] 极度去杠杆——市场极度避险"
+        return "极度去杠杆——市场极度避险"
     elif score < 35:
-        return "[算法输出] 去杠杆中——市场风险偏好低"
+        return "去杠杆中——市场风险偏好低"
     elif score < 50:
-        return "[算法输出] 中性偏谨慎——杠杆水平正常偏低"
+        return "中性偏谨慎——杠杆水平正常偏低"
     elif score < 65:
-        return "[算法输出] 中性偏积极——杠杆温和增加"
+        return "中性偏积极——杠杆温和增加"
     elif score < 80:
-        return "[算法输出] 加杠杆中——市场风险偏好上升"
+        return "加杠杆中——市场风险偏好上升"
     else:
-        return "[算法输出] 杠杆过热——需警惕回调风险"
+        return "杠杆过热——需警惕回调风险"
 
 
 def _margin_history(days: int) -> dict:

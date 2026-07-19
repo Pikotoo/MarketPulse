@@ -85,12 +85,12 @@ def _score_persistence(moms: list, as_of=None) -> dict:
 
 
 def _interpret(score):
-    if score < 25: return "[算法输出] 极度分散——无明显主线"
-    elif score < 40: return "[算法输出] 分散——各板块轮动活跃"
-    elif score < 55: return "[算法输出] 正常——有主线但不过热"
-    elif score < 70: return "[算法输出] 偏拥挤——资金明显集中"
-    elif score < 85: return "[算法输出] 拥挤——热门赛道交易拥挤"
-    return "[算法输出] 极度拥挤——需警惕踩踏"
+    if score < 25: return "极度分散——无明显主线"
+    elif score < 40: return "分散——各板块轮动活跃"
+    elif score < 55: return "正常——有主线但不过热"
+    elif score < 70: return "偏拥挤——资金明显集中"
+    elif score < 85: return "拥挤——热门赛道交易拥挤"
+    return "极度拥挤——需警惕踩踏"
 
 
 def _crowding_history(days: int) -> dict:

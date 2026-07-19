@@ -79,12 +79,12 @@ def _score_margin_sub(as_of=None) -> dict:
 
 
 def _interpret(score):
-    if score < 25: return "[算法输出] 资金全面流出——市场情绪极度悲观"
-    elif score < 40: return "[算法输出] 资金偏流出——观望为主"
-    elif score < 55: return "[算法输出] 资金面中性——多空基本平衡"
-    elif score < 70: return "[算法输出] 资金偏流入——做多意愿增强"
-    elif score < 85: return "[算法输出] 资金积极流入——多方占优"
-    return "[算法输出] 资金全面涌入——情绪可能过热"
+    if score < 25: return "资金全面流出——市场情绪极度悲观"
+    elif score < 40: return "资金偏流出——观望为主"
+    elif score < 55: return "资金面中性——多空基本平衡"
+    elif score < 70: return "资金偏流入——做多意愿增强"
+    elif score < 85: return "资金积极流入——多方占优"
+    return "资金全面涌入——情绪可能过热"
 
 
 def _fund_sentiment_history(days: int) -> dict:

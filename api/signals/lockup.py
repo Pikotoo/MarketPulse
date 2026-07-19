@@ -120,17 +120,17 @@ def _score_ratio(df: pd.DataFrame) -> dict:
 
 def _interpret(score: float) -> str:
     if score < 20:
-        return "[算法输出] 解禁压力极低——流通盘供给稳定"
+        return "解禁压力极低——流通盘供给稳定"
     elif score < 35:
-        return "[算法输出] 解禁压力较低——市场承接力充足"
+        return "解禁压力较低——市场承接力充足"
     elif score < 50:
-        return "[算法输出] 解禁压力正常——供给节奏平稳"
+        return "解禁压力正常——供给节奏平稳"
     elif score < 65:
-        return "[算法输出] 解禁压力偏高——关注个股解禁窗口"
+        return "解禁压力偏高——关注个股解禁窗口"
     elif score < 80:
-        return "[算法输出] 解禁压力较大——流通盘供给增加，需关注承接力"
+        return "解禁压力较大——流通盘供给增加，需关注承接力"
     else:
-        return "[算法输出] 解禁洪峰——大量筹码解禁释放"
+        return "解禁洪峰——大量筹码解禁释放"
 
 
 def _lockup_history(days: int) -> dict:

@@ -138,19 +138,19 @@ def _score_continuity(flows: pd.Series) -> dict:
 
 def _interpret(score: float) -> str:
     if score < 20:
-        return "[算法输出] 外资持续流出——市场极度悲观"
+        return "外资持续流出——市场极度悲观"
     elif score < 35:
-        return "[算法输出] 外资偏流出——境外资金谨慎"
+        return "外资偏流出——境外资金谨慎"
     elif score < 45:
-        return "[算法输出] 外资中性偏空——小幅净流出"
+        return "外资中性偏空——小幅净流出"
     elif score < 55:
-        return "[算法输出] 外资中性——进出基本平衡"
+        return "外资中性——进出基本平衡"
     elif score < 65:
-        return "[算法输出] 外资中性偏多——小幅净流入"
+        return "外资中性偏多——小幅净流入"
     elif score < 80:
-        return "[算法输出] 外资持续流入——境外资金积极看多"
+        return "外资持续流入——境外资金积极看多"
     else:
-        return "[算法输出] 外资爆买——短期情绪过热"
+        return "外资爆买——短期情绪过热"
 
 
 def _northbound_history(days: int) -> dict:

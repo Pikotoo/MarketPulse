@@ -104,15 +104,15 @@ def _sector_breadth_raw(as_of: Optional[pd.Timestamp] = None) -> float:
 def _panic_level(total: float) -> tuple:
     """恐慌指数 → (level, color, description)"""
     if total < 20:
-        return "[算法输出] 平静", "green", "市场波澜不惊，波动低、行业同步上涨，结构稳定"
+        return "平静", "green", "市场波澜不惊，波动低、行业同步上涨，结构稳定"
     elif total < 35:
-        return "[算法输出] 警惕", "yellow", "局部波动上升，但整体风险可控"
+        return "警惕", "yellow", "局部波动上升，但整体风险可控"
     elif total < 50:
-        return "[算法输出] 焦虑", "yellow", "板块分化明显，市场方向不确定"
+        return "焦虑", "yellow", "板块分化明显，市场方向不确定"
     elif total < 70:
-        return "[算法输出] 恐慌", "red", "波动飙升、宽度崩塌，市场处于防御模式"
+        return "恐慌", "red", "波动飙升、宽度崩塌，市场处于防御模式"
     else:
-        return "[算法输出] 极度恐慌", "red", "所有指标共振，恐慌情绪弥漫，通常对应市场底部区域"
+        return "极度恐慌", "red", "所有指标共振，恐慌情绪弥漫，通常对应市场底部区域"
 
 
 def _panic_snapshot(as_of: pd.Timestamp) -> dict:

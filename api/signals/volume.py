@@ -182,19 +182,19 @@ def _score_vol_price_health(vp: Optional[dict]) -> dict:
 
 def _interpret(score: float) -> str:
     if score < 20:
-        return "[算法输出] 极度缩量——市场极度冷清，地量或见地价"
+        return "极度缩量——市场极度冷清，地量或见地价"
     elif score < 35:
-        return "[算法输出] 缩量——交易清淡，观望情绪浓厚"
+        return "缩量——交易清淡，观望情绪浓厚"
     elif score < 45:
-        return "[算法输出] 量能偏低——参与度不足"
+        return "量能偏低——参与度不足"
     elif score < 55:
-        return "[算法输出] 量能正常——市场交投平稳"
+        return "量能正常——市场交投平稳"
     elif score < 65:
-        return "[算法输出] 温和放量——市场关注度上升"
+        return "温和放量——市场关注度上升"
     elif score < 80:
-        return "[算法输出] 显著放量——资金积极进场"
+        return "显著放量——资金积极进场"
     else:
-        return "[算法输出] 天量——极度亢奋，需警惕转折"
+        return "天量——极度亢奋，需警惕转折"
 
 
 def _volume_history(days: int) -> dict:
