@@ -33,6 +33,7 @@ jobs:
           for f in scripts/*.py; do python -m py_compile "$f"; done
 
       - name: Run tests
+        env:
+          DATA_ROOT: /tmp/marketpulse_no_data
         run: |
-          mkdir -p data_source
           python -m pytest tests/ -v --tb=short

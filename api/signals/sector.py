@@ -40,6 +40,7 @@ DEFENSIVE = {'990008', '990011', '990012', '990025', '990013'}
 OFFENSIVE = {'990006', '990022', '990023', '990024', '990026', '990005', '990020'}
 
 _cache = {}
+_MAX_CACHE_SIZE = 100  # 限制缓存条目数，防止内存无限增长
 
 
 def get_sector_codes() -> list:
@@ -53,6 +54,10 @@ def _load_sector(code: str):
         return _cache[code]
     try:
         df = read_macro_series(code)
+        # LRU: 超过限制时移除最早的条目
+        if len(_cache) >= _MAX_CACHE_SIZE:
+            oldest = next(iter(_cache))
+            del _cache[oldest]
         _cache[code] = df
         return df
     except FileNotFoundError:
@@ -185,8 +190,7 @@ def get_sector_breadth(dt: Optional[date] = None, days: int = 0) -> dict:
         }
 
     # ── 单值模式 ──
-    all_codes = list_macro_codes()
-    sector_codes = [c for c in all_codes if c.startswith('9900') and len(c) == 6 and c[4:].isdigit()]
+    sector_codes = get_sector_codes()
 
     momentums = {}
     above_ma = {}
@@ -273,7 +277,7 @@ def get_sector_heatmap(dt: Optional[date] = None, **kwargs) -> dict:
     target_date = pd.Timestamp(dt)
 
     all_codes = list_macro_codes()
-    sector_codes = [c for c in all_codes if c.startswith('9900') and len(c) == 6 and c[4:].isdigit()]
+    sector_codes = get_sector_codes()
 
     sectors = []
     for code in sector_codes:

@@ -29,4 +29,4 @@ HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
 EXPOSE 8898
 
 # 启动: 先下载数据(如果不存在)，再启动服务
-CMD ["sh", "-c", "python scripts/setup_data.py 2>/dev/null; exec gunicorn -w 4 -b 0.0.0.0:8898 api.app:app"]
+CMD ["sh", "-c", "python scripts/setup_data.py || echo '[WARNING] Data setup failed — starting with limited data'; exec gunicorn -w 4 -b 0.0.0.0:8898 api.app:app"]

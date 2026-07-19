@@ -25,27 +25,40 @@ server_process = subprocess.Popen(
 # 等待服务就绪
 import requests
 URL = "http://localhost:8898"
-# 使用默认仪表盘 Key，或设置 DASHBOARD_KEY 环境变量
-API_KEY = os.getenv("DASHBOARD_KEY", "mp-806fac606a6e1ce607ce158175087ca9")
-headers = {"X-API-Key": API_KEY}
 
 ready = False
-for i in range(15):
+for i in range(20):
     try:
-        r = requests.get(f"{URL}/api/v1/health", timeout=2)
+        r = requests.get(f"{URL}/api/v1/health", timeout=3)
         if r.status_code == 200:
             ready = True
             break
     except Exception:
         pass
     time.sleep(1)
-    print(f"  等待服务启动... ({i+1}/15)")
+    print(f"  等待服务启动... ({i+1}/20)")
 
 if not ready:
     print("❌ API 服务启动失败，请确认 api/app.py 存在")
     input("\n按回车退出...")
     sys.exit(1)
 
+# 动态获取仪表盘 Key（不再硬编码）
+API_KEY = os.getenv("DASHBOARD_KEY")
+if not API_KEY:
+    try:
+        r = requests.get(f"{URL}/api/v1/dashboard-key", timeout=5)
+        if r.status_code == 200:
+            API_KEY = r.json().get("key", "")
+    except Exception:
+        pass
+if not API_KEY:
+    print("❌ 无法获取仪表盘 API Key")
+    server_process.terminate()
+    input("\n按回车退出...")
+    sys.exit(1)
+
+headers = {"X-API-Key": API_KEY}
 print("   ✅ 服务已就绪\n")
 
 # ── 2. 调用 4 个指标 ──────────────────────────────

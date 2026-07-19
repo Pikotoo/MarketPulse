@@ -382,20 +382,22 @@ def signal_sector():
 def signal_defensive():
     """防御/进攻比 — 市场风险偏好"""
     from api.signals.sector import get_sector_breadth
-    result = get_sector_breadth(days=0)
-    ratio = result.get("defensive_vs_offensive", 0)
-    appetite = result.get("risk_appetite", "neutral")
-    return {
-        "indicator": "defensive_ratio",
-        "value": ratio,
-        "risk_appetite": appetite,
-        "interpretation": (
-            "资金涌向防御" if ratio > 0.05
-            else ("资金追逐进攻" if ratio < -0.05 else "攻防均衡")
-        ),
-        "note": "正值越大，资金越保守；负值越大，资金越激进",
-        "as_of_date": result.get("as_of_date"),
-    }
+    def _compute():
+        result = get_sector_breadth(days=0)
+        ratio = result.get("defensive_vs_offensive", 0)
+        appetite = result.get("risk_appetite", "neutral")
+        return {
+            "indicator": "defensive_ratio",
+            "value": ratio,
+            "risk_appetite": appetite,
+            "interpretation": (
+                "资金涌向防御" if ratio > 0.05
+                else ("资金追逐进攻" if ratio < -0.05 else "攻防均衡")
+            ),
+            "note": "正值越大，资金越保守；负值越大，资金越激进",
+            "as_of_date": result.get("as_of_date"),
+        }
+    return _cached_signal("defensive_ratio", lambda days=0: _compute(), _get_days())
 
 
 @app.route("/api/v1/signal/composite")
@@ -445,7 +447,7 @@ def signal_momentum():
 def signal_heatmap():
     """行业热力图 — 全部32行业动量+趋势数据"""
     from api.signals.sector import get_sector_heatmap
-    return get_sector_heatmap()
+    return _cached_signal("sector_heatmap", lambda days=0: get_sector_heatmap(), _get_days())
 
 
 # ── v2.1 新增信号端点 ──────────────────────────────────────
@@ -519,7 +521,7 @@ def signal_crowding():
 def signal_style():
     """风格轮动 — 大盘/小盘 价值/成长"""
     from api.signals.style import get_style_rotation
-    return get_style_rotation(days=_get_days())
+    return _cached_signal("style_rotation", lambda days=0: get_style_rotation(days=days), _get_days())
 
 
 @app.route("/api/v1/signal/fund-sentiment")
@@ -549,7 +551,7 @@ def signal_cross():
 def signal_regime():
     """市场状态识别 — 恐慌/低迷/中性/乐观/亢奋"""
     from api.signals.regime import get_regime
-    return get_regime(days=_get_days())
+    return _cached_signal("regime", lambda days=0: get_regime(days=days), _get_days())
 
 
 # ── v2.1 工具端点 ──────────────────────────────────────────

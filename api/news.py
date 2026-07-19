@@ -57,14 +57,28 @@ RSS_FEEDS = [
         "name": "Reuters Business",
         "url": "https://www.reutersagency.com/feed/",
         "category": "国际市场",
-        "enabled": False,
+        "enabled": True,
     },
     {
         "name": "CNBC Top News",
         "url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
         "category": "国际市场",
-        "enabled": False,
+        "enabled": True,
     },
+    {
+        "name": "人民网财经",
+        "url": "http://finance.people.com.cn/rss/finance.xml",
+        "category": "国内财经",
+        "enabled": True,
+    },
+    {
+        "name": "新华网财经",
+        "url": "http://www.xinhuanet.com/finance/rss.xml",
+        "category": "国内财经",
+        "enabled": True,
+    },
+    # 更多 RSS 源可在下面添加。格式：
+    # {"name": "源名称", "url": "RSS地址", "category": "分类", "enabled": True},
 ]
 
 

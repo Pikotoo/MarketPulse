@@ -38,7 +38,8 @@ API_HOST = os.getenv("API_HOST", "0.0.0.0")
 API_VERSION = "2.1.0"
 HEALTH_ENDPOINT_URL = f"http://localhost:{API_PORT}/api/v1/health"
 ALGORITHM_VERSION = "2026.07.17"
-DASHBOARD_KEY = os.getenv("DASHBOARD_KEY", "mp-806fac606a6e1ce607ce158175087ca9")  # 仪表盘专用只读 key
+_DEFAULT_DASHBOARD_KEY = "mp-" + __import__("secrets").token_hex(16)
+DASHBOARD_KEY = os.getenv("DASHBOARD_KEY", _DEFAULT_DASHBOARD_KEY)  # 仪表盘专用只读 key（未设置则随机生成）
 
 # ── AI 配置 ─────────────────────────────────────────────
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
