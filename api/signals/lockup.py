@@ -204,10 +204,53 @@ def _lockup_history(days: int) -> dict:
     }
 
 
-def get_lockup_pressure(days: int = 0) -> dict:
-    """限售解禁压力分 0-100"""
+def _compute_lockup_at(as_of: pd.Timestamp) -> Optional[float]:
+    """在指定日期计算限售解禁压力分 (0-100)"""
+    df = _load_lockup()
+    if df is None:
+        return None
+
+    nearby = df[df.index <= as_of]
+    if len(nearby) < 22:
+        return None
+
+    try:
+        latest = float(nearby["total_lockup_vol"].iloc[-1])
+        ma20 = float(nearby["total_lockup_vol"].iloc[-20:].mean())
+        dev = round((latest / ma20 - 1) * 100, 2) if ma20 > 0 else 0
+
+        dev_s = _norm(dev, -30.0, 100.0)
+
+        if len(nearby) >= 120:
+            ma20v = ma20
+            ma120 = float(nearby["total_lockup_vol"].iloc[-120:].mean())
+            ratio = round(ma20v / ma120, 2) if ma120 > 0 else 1.0
+            ratio_s = _norm(ratio, 0.5, 2.5)
+        else:
+            ratio_s = 0.5
+
+        return round((dev_s * 0.5 + ratio_s * 0.5) * 100, 1)
+    except Exception:
+        return None
+
+
+def get_lockup_pressure(days: int = 0, as_of=None) -> dict:
+    """限售解禁压力分 0-100
+
+    Args:
+        days: >0 返回历史序列
+        as_of: 指定历史日期 (pd.Timestamp 或 date)，计算该日期的值
+    """
     if days > 0:
         return _lockup_history(days)
+
+    if as_of is not None:
+        val = _compute_lockup_at(pd.Timestamp(as_of))
+        if val is not None:
+            return {"indicator": "lockup_pressure", "value": val, "range": "0-100",
+                    "interpretation": _interpret(val), "as_of_date": str(as_of)[:10]}
+        return {"indicator": "lockup_pressure", "value": None, "status": "no_data",
+                "message": "该日期解禁数据不足"}
 
     df = _load_lockup()
     if df is None:

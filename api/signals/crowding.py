@@ -96,11 +96,49 @@ def _interpret(score):
     return "[算法输出] 极度拥挤——需警惕踩踏"
 
 
+def _crowding_history(days: int) -> dict:
+    """行业拥挤度历史序列（周频采样）"""
+    days = min(days, 365)
+    end = pd.Timestamp.now()
+    cursor = end - pd.Timedelta(days=days)
+
+    anchors = []
+    while cursor <= end:
+        if cursor.dayofweek < 5:
+            anchors.append(cursor)
+        cursor += pd.Timedelta(days=4)
+
+    if len(anchors) > 50:
+        step = max(1, len(anchors) // 40)
+        anchors = anchors[::step]
+
+    history = []
+    for a in anchors:
+        try:
+            moms = _get_all_momentums(as_of=a)
+            if not moms or len(moms) < 10:
+                continue
+            s1 = _score_concentration(moms)
+            s2 = _score_dispersion(moms)
+            # persistence 在历史中跳过（需要距今一个月前，太慢）
+            valid = [s["sub_score"] for s in [s1, s2] if s["sub_score"] is not None]
+            if len(valid) >= 1:
+                total = round(sum(valid) / len(valid) * 3 * 100, 1)
+                history.append({"date": a.strftime("%Y-%m-%d"), "score": total})
+        except Exception:
+            continue
+
+    return {
+        "indicator": "sector_crowding", "range": "0-100", "days": days,
+        "samples": len(history), "as_of_date": date.today().isoformat(),
+        "history": history,
+    }
+
+
 def get_sector_crowding(days: int = 0) -> dict:
     """行业拥挤度 0-100"""
     if days > 0:
-        return {"indicator": "sector_crowding", "status": "not_implemented",
-                "note": "历史序列暂未实现", "history": []}
+        return _crowding_history(days)
 
     moms = _get_all_momentums()
     s1 = _score_concentration(moms)

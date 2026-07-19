@@ -260,8 +260,31 @@ def endpoints():
 
 @app.route("/api/v1/dashboard-key")
 def dashboard_key():
-    """仪表盘获取临时 API Key（不暴露在 HTML 源码中）"""
+    """仪表盘获取临时 API Key（不暴露在 HTML 源码中）—— 带 IP 限流"""
     from config import DASHBOARD_KEY
+
+    # IP 级简易限流：每秒最多 2 次，每天最多 200 次
+    import time as _time
+    client_ip = request.remote_addr or "unknown"
+    now = _time.time()
+    if not hasattr(dashboard_key, "_rate_cache"):
+        dashboard_key._rate_cache = {}  # {ip: [timestamps]}
+
+    rc = dashboard_key._rate_cache
+    # 清理超过 1 秒的旧记录和超过 24h 的记录
+    rc[client_ip] = [t for t in rc.get(client_ip, []) if now - t < 86400]
+    recent_1s = [t for t in rc[client_ip] if now - t < 1.0]
+
+    if len(recent_1s) >= 2:
+        return jsonify({"error": "rate_limited", "message": "请求过于频繁，请稍后再试"}), 429
+    if len(rc[client_ip]) >= 200:
+        return jsonify({"error": "daily_quota", "message": "今日请求次数已用完"}), 429
+
+    rc[client_ip].append(now)
+    # 定期清理过期 IP 条目
+    if len(rc) > 1000:
+        rc.clear()
+
     return jsonify({"key": DASHBOARD_KEY})
 
 
@@ -615,9 +638,16 @@ def tool_pe_calculator():
 @require_api_key
 @signal_endpoint
 def tool_similar_period():
-    """相似期对比 — 找历史中与当前最接近的N个时间点，包含后续表现"""
+    """相似期对比 — 找历史中与当前最接近的N个时间点，包含后续表现（已缓存）"""
     days = min(request.args.get("days", 365, type=int), 730)
     top_n = min(request.args.get("n", 5, type=int), 10)
+
+    # 读缓存（该端点计算成本高，缓存24小时有效）
+    from api.cache import get_cached, set_cache
+    cache_key = f"similar_period_{days}_{top_n}"
+    cached = get_cached(cache_key)
+    if cached is not None:
+        return cached
 
     from api.signals.composite import _composite_history
     hist = _composite_history(days)
@@ -676,7 +706,7 @@ def tool_similar_period():
                         "change_pct": pct,
                     }
 
-    return {
+    result = {
         "indicator": "similar_period",
         "target_score": target_score,
         "target_date": current.get("date"),
@@ -684,6 +714,8 @@ def tool_similar_period():
         "note": "基于综合情绪分距离匹配，forward=该日期后N个月的指标变化。仅供研究参考，不暗示未来。",
         "as_of_date": date.today().isoformat(),
     }
+    set_cache(cache_key, result)
+    return result
 
 
 # ── 新闻端点 ──────────────────────────────────────────────

@@ -30,6 +30,7 @@ from datetime import date
 from typing import Optional
 
 from api.day_reader import get_macro_value
+from api.signals.erp import _get_bond_yield as _get_bond_yield_latest, _get_bond_yield_at  # 去重：复用 erp.py 的实现
 
 
 def _score_pe(pct: Optional[float]) -> Optional[float]:
@@ -56,18 +57,6 @@ def _compute_erp_from_pe(pe: float, bond_yield: float = None) -> Optional[float]
     if bond_yield is None:
         return None
     return round(1.0 / pe * 100 - bond_yield, 3)
-
-
-def _get_bond_yield_latest() -> Optional[float]:
-    """获取最新 10 年国债收益率"""
-    for code in ["CNG10Y", "CNDT10Y", "CNT10Y", "CNDTFY"]:
-        try:
-            v = get_macro_value(code)
-            if v is not None:
-                return v
-        except Exception:
-            continue
-    return None
 
 
 def _score_erp() -> Optional[float]:
@@ -253,15 +242,16 @@ def _composite_history(days: int) -> dict:
         step = max(1, len(weekly) // 35)
         weekly = weekly.iloc[::step]
 
-    bond_yield = _get_bond_yield_latest()  # 国债利率变化慢，用最新值近似可接受
+    bond_yield_latest = _get_bond_yield_latest()  # 兜底用
 
     history = []
     for _, row in weekly.iterrows():
         dt = row["date"]
         pe_val = float(row["pe"])
 
-        # PE 分位（滚动 5 年）
-        lookback = dt - pd.Timedelta(days=5*365)
+        # PE 分位（滚动 PE_LOOKBACK_YEARS 年，与 pe-percentile 端点保持一致）
+        from config import PE_LOOKBACK_YEARS
+        lookback = dt - pd.Timedelta(days=PE_LOOKBACK_YEARS * 365)
         hist_window = pe_data[(pe_data["date"] >= lookback) & (pe_data["date"] <= dt)]
         if len(hist_window) >= 100:
             pct = round((hist_window["pe"] < pe_val).sum() / len(hist_window) * 100, 1)
@@ -269,6 +259,8 @@ def _composite_history(days: int) -> dict:
             pct = None
 
         pe_sub = _score_pe(pct) if pct is not None else None
+        # ERP 使用对应日期的债券收益率（而非固定最新值）
+        bond_yield = _get_bond_yield_at(dt) or bond_yield_latest
         erp = _compute_erp_from_pe(pe_val, bond_yield)
         erp_sub = _score_erp_value(erp) if erp is not None else None
         macro_sub = _score_macro(as_of=dt)
@@ -293,6 +285,6 @@ def _composite_history(days: int) -> dict:
         "indicator": "composite", "range": "0-100", "days": days,
         "samples": len(history),
         "as_of_date": date.today().isoformat(),
-        "method_note": "PE逐日真实分位 + ERP(PE+最新国债) + 宏观逐日回算 + 行业宽度逐日回算",
+        "method_note": "PE逐日真实分位 + ERP(PE+对应日期国债) + 宏观逐日回算 + 行业宽度逐日回算 + 资金三维逐日回算",
         "history": history,
     }

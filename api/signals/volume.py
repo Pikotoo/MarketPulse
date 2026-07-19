@@ -101,7 +101,8 @@ def _vol_price_relation() -> Optional[dict]:
         if sh is None or len(sh) < 22:
             return None
 
-        # 近5日和近20日量价
+        # 近5日和近20日量价关系
+        results = {}
         for w, label in [(5, "5d"), (20, "20d")]:
             recent = sh.iloc[-w:]
             up_days = recent[recent["close"] > recent["open"]]
@@ -115,8 +116,9 @@ def _vol_price_relation() -> Optional[dict]:
                 vp_ratio = round(up_vol_avg / (up_vol_avg + down_vol_avg), 3)
             else:
                 vp_ratio = 0.5
+            results[label] = vp_ratio
 
-        return {"up_vol_ratio": vp_ratio}
+        return {"up_vol_ratio_5d": results.get("5d"), "up_vol_ratio_20d": results.get("20d")}
     except Exception:
         return None
 
@@ -176,10 +178,12 @@ def _score_vol_price_health(vp: Optional[dict]) -> dict:
     涨放量+跌缩量=健康 → 高分
     涨缩量+跌放量=不健康 → 低分
     """
-    if vp is None or vp.get("up_vol_ratio") is None:
+    if vp is None:
         return {"value": None, "sub_score": None, "note": "数据不可用"}
-
-    ratio = vp["up_vol_ratio"]
+    # 优先用 20d（更稳定），fallback 5d
+    ratio = vp.get("up_vol_ratio_20d") or vp.get("up_vol_ratio_5d")
+    if ratio is None:
+        return {"value": None, "sub_score": None, "note": "数据不可用"}
     # ratio > 0.55 = 上涨日成交占比高 = 健康
     # ratio < 0.45 = 下跌日成交占比高 = 不健康
     s = _norm(ratio, 0.35, 0.65)

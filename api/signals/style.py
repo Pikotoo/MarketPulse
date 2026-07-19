@@ -34,7 +34,7 @@ def _norm(v, lo, hi):
     return (v - lo) / (hi - lo)
 
 
-def _score_size_rotation() -> dict:
+def _score_size_rotation(as_of=None) -> dict:
     """大盘/小盘相对强度 — 用行业数据近似：大市值行业 vs 小市值行业"""
     try:
         # 大市值代表行业: 银行(990025) + 食品饮料(990008) + 非银金融(990026)
@@ -46,13 +46,13 @@ def _score_size_rotation() -> dict:
         for c in large_codes:
             df = _load_sector(c)
             if df is not None:
-                large_moms.append(_momentum(df, 60))
+                large_moms.append(_momentum(df, 60, as_of))
 
         small_moms = []
         for c in small_codes:
             df = _load_sector(c)
             if df is not None:
-                small_moms.append(_momentum(df, 60))
+                small_moms.append(_momentum(df, 60, as_of))
 
         if not large_moms or not small_moms:
             return {"value": None, "sub_score": None}
@@ -77,20 +77,20 @@ def _score_size_rotation() -> dict:
         return {"value": None}
 
 
-def _score_value_growth() -> dict:
+def _score_value_growth(as_of=None) -> dict:
     """价值/成长偏向 — 防御行业 vs 进攻行业动量差"""
     try:
         def_moms = []
         for c in DEFENSIVE:
             df = _load_sector(c)
             if df is not None:
-                def_moms.append(_momentum(df, 60))
+                def_moms.append(_momentum(df, 60, as_of))
 
         off_moms = []
         for c in OFFENSIVE:
             df = _load_sector(c)
             if df is not None:
-                off_moms.append(_momentum(df, 60))
+                off_moms.append(_momentum(df, 60, as_of))
 
         if not def_moms or not off_moms:
             return {"value": None}
@@ -114,12 +114,13 @@ def _score_value_growth() -> dict:
         return {"value": None}
 
 
-def _score_rotation_speed() -> dict:
+def _score_rotation_speed(as_of=None) -> dict:
     """轮动速度 — 过去一个月 Top3 行业更换频率"""
     try:
         from api.signals.crowding import _get_all_momentums
-        now = _get_all_momentums()
-        month_ago = pd.Timestamp.now() - pd.Timedelta(days=21)
+        now_date = pd.Timestamp(as_of) if as_of else pd.Timestamp.now()
+        month_ago = now_date - pd.Timedelta(days=21)
+        now = _get_all_momentums(now_date)
         old = _get_all_momentums(month_ago)
 
         if not now or not old:
@@ -137,11 +138,47 @@ def _score_rotation_speed() -> dict:
         return {"value": None}
 
 
+def _style_history(days: int) -> dict:
+    """风格轮动历史序列（周频采样）"""
+    days = min(days, 365)
+    end = pd.Timestamp.now()
+    cursor = end - pd.Timedelta(days=days)
+
+    anchors = []
+    while cursor <= end:
+        if cursor.dayofweek < 5:
+            anchors.append(cursor)
+        cursor += pd.Timedelta(days=4)
+
+    if len(anchors) > 50:
+        step = max(1, len(anchors) // 40)
+        anchors = anchors[::step]
+
+    history = []
+    for a in anchors:
+        try:
+            s1 = _score_size_rotation(as_of=a)
+            s2 = _score_value_growth(as_of=a)
+            history.append({
+                "date": a.strftime("%Y-%m-%d"),
+                "size_style": s1.get("style", "unknown"),
+                "size_diff": s1.get("value"),
+                "value_growth_bias": s2.get("bias", "unknown"),
+                "vg_diff": s2.get("value"),
+            })
+        except Exception:
+            continue
+
+    return {
+        "indicator": "style_rotation", "days": days, "samples": len(history),
+        "as_of_date": date.today().isoformat(), "history": history,
+    }
+
+
 def get_style_rotation(days: int = 0) -> dict:
     """风格轮动指标"""
     if days > 0:
-        return {"indicator": "style_rotation", "status": "not_implemented",
-                "note": "历史序列暂未实现", "history": []}
+        return _style_history(days)
 
     s1 = _score_size_rotation()
     s2 = _score_value_growth()

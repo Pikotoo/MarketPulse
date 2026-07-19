@@ -105,11 +105,43 @@ def _interpret(score):
     return "[算法输出] 流动性极度宽松"
 
 
+def _liquidity_history(days: int) -> dict:
+    """流动性历史序列（月频采样）"""
+    days = min(days, 365)
+    end = pd.Timestamp.now()
+    cursor = end - pd.Timedelta(days=days)
+
+    anchors = []
+    while cursor <= end:
+        anchors.append(cursor)
+        cursor += pd.Timedelta(days=30)
+
+    history = []
+    for a in anchors:
+        try:
+            s1 = _score_shibor_level(as_of=a)
+            s2 = _score_shibor_slope(as_of=a)
+            s3 = _score_m1m2_spread(as_of=a)
+            s4 = _score_mlf_lpr(as_of=a)
+            subs = {"shibor_level": s1, "shibor_slope": s2, "m1m2_spread": s3, "mlf_lpr_spread": s4}
+            valid = [s["sub_score"] for s in subs.values() if s["sub_score"] is not None]
+            if len(valid) >= 2:
+                total = round(sum(valid) / len(valid) * 4 * 100, 1)
+                history.append({"date": a.strftime("%Y-%m-%d"), "score": total})
+        except Exception:
+            continue
+
+    return {
+        "indicator": "liquidity_score", "range": "0-100", "days": days,
+        "samples": len(history), "as_of_date": date.today().isoformat(),
+        "history": history,
+    }
+
+
 def get_liquidity_score(days: int = 0) -> dict:
     """流动性评分 0-100"""
     if days > 0:
-        return {"indicator": "liquidity_score", "status": "not_implemented",
-                "note": "历史序列暂未实现", "history": []}
+        return _liquidity_history(days)
 
     s1 = _score_shibor_level()
     s2 = _score_shibor_slope()

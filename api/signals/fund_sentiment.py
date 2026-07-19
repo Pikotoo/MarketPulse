@@ -24,13 +24,18 @@ from typing import Optional
 from api.day_reader import read_macro_series
 
 
-def _score_etf_flow() -> dict:
+def _score_etf_flow(as_of=None) -> dict:
     """ETF 净申赎趋势 — 近20日变化"""
     try:
         # ETF 融资余额数据
         df = read_macro_series("SETF")
         if df is None or len(df) < 21:
             return {"value": None, "sub_score": None}
+
+        if as_of is not None:
+            df = df[df.index <= pd.Timestamp(as_of)]
+            if len(df) < 21:
+                return {"value": None, "sub_score": None}
 
         latest_ma5 = float(df["close"].iloc[-5:].mean())
         past_ma20 = float(df["close"].iloc[-20:].mean())
@@ -53,11 +58,11 @@ def _score_etf_flow() -> dict:
         return {"value": None, "sub_score": None}
 
 
-def _score_northbound_sub() -> dict:
+def _score_northbound_sub(as_of=None) -> dict:
     """从北向情绪分取子分"""
     try:
         from api.signals.northbound import get_northbound_sentiment
-        r = get_northbound_sentiment(days=0)
+        r = get_northbound_sentiment(days=0, as_of=as_of)
         v = r.get("value")
         if v is not None:
             return {"value": v, "unit": "/100", "sub_score": round(float(v) * 0.0035, 4)}
@@ -66,11 +71,11 @@ def _score_northbound_sub() -> dict:
     return {"value": None, "sub_score": None}
 
 
-def _score_margin_sub() -> dict:
+def _score_margin_sub(as_of=None) -> dict:
     """从融资情绪分取子分"""
     try:
         from api.signals.margin import get_margin_sentiment
-        r = get_margin_sentiment(days=0)
+        r = get_margin_sentiment(days=0, as_of=as_of)
         v = r.get("value")
         if v is not None:
             return {"value": v, "unit": "/100", "sub_score": round(float(v) * 0.0035, 4)}
@@ -88,11 +93,47 @@ def _interpret(score):
     return "[算法输出] 资金全面涌入——情绪可能过热"
 
 
+def _fund_sentiment_history(days: int) -> dict:
+    """资金情绪历史序列（周频采样）"""
+    days = min(days, 365)
+    end = pd.Timestamp.now()
+    cursor = end - pd.Timedelta(days=days)
+
+    anchors = []
+    while cursor <= end:
+        if cursor.dayofweek < 5:
+            anchors.append(cursor)
+        cursor += pd.Timedelta(days=4)
+
+    if len(anchors) > 50:
+        step = max(1, len(anchors) // 40)
+        anchors = anchors[::step]
+
+    history = []
+    for a in anchors:
+        try:
+            s1 = _score_northbound_sub(as_of=a)
+            s2 = _score_margin_sub(as_of=a)
+            s3 = _score_etf_flow(as_of=a)
+            subs = {"northbound": s1, "margin": s2, "etf_flow": s3}
+            valid = [s["sub_score"] for s in subs.values() if s["sub_score"] is not None]
+            if len(valid) >= 2:
+                total = round(sum(valid) / len(valid) * 3 * 100, 1)
+                history.append({"date": a.strftime("%Y-%m-%d"), "score": total})
+        except Exception:
+            continue
+
+    return {
+        "indicator": "fund_sentiment", "range": "0-100", "days": days,
+        "samples": len(history), "as_of_date": date.today().isoformat(),
+        "history": history,
+    }
+
+
 def get_fund_sentiment(days: int = 0) -> dict:
     """资金情绪分 0-100"""
     if days > 0:
-        return {"indicator": "fund_sentiment", "status": "not_implemented",
-                "note": "历史序列暂未实现", "history": []}
+        return _fund_sentiment_history(days)
 
     s1 = _score_northbound_sub()
     s2 = _score_margin_sub()

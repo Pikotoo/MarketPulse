@@ -173,8 +173,23 @@ def _erp_latest() -> dict:
     }
 
 
+def _get_bond_yield_at(as_of: pd.Timestamp) -> Optional[float]:
+    """获取指定日期的 10 年国债收益率（从历史 .day 文件中读取）"""
+    for code in ["CNG10Y", "CNDT10Y", "CNT10Y", "CNDTFY"]:
+        try:
+            df = read_macro_series(code)
+            if df is None or len(df) == 0:
+                continue
+            nearby = df[df.index <= as_of]
+            if len(nearby) > 0:
+                return float(nearby["close"].iloc[-1])
+        except Exception:
+            continue
+    return None
+
+
 def _erp_history(days: int) -> dict:
-    """计算 ERP 历史序列（月度快照）"""
+    """计算 ERP 历史序列（周频采样，使用历史债券收益率）"""
     pe_data = _load_pe_data()
     if pe_data is None or len(pe_data) == 0:
         return {
@@ -210,12 +225,32 @@ def _erp_history(days: int) -> dict:
     recent["year"] = recent["date"].dt.isocalendar().year.astype(int)
     weekly = recent.groupby(["year", "week"], sort=True).last().reset_index()
 
+    # 预加载债券收益率历史（避免逐行重复读文件）
+    bond_history = None
+    for code in ["CNG10Y", "CNDT10Y", "CNT10Y", "CNDTFY"]:
+        try:
+            bond_history = read_macro_series(code)
+            if bond_history is not None and len(bond_history) > 0:
+                break
+        except Exception:
+            continue
+
     history = []
+    bond_fallback = _get_bond_yield()  # 最新值作为兜底
     for _, row in weekly.iterrows():
         pe = float(row["pe"])
-        dt_str = str(row["date"].date())
-        # 估算该日期的债券收益率（用最新值近似，历史债券数据不一定有）
-        bond_yield = _get_bond_yield()
+        dt = row["date"]
+        dt_str = str(dt.date())
+
+        # 使用该日期的债券收益率（而非最新值）
+        bond_yield = None
+        if bond_history is not None:
+            bond_nearby = bond_history[bond_history.index <= dt]
+            if len(bond_nearby) > 0:
+                bond_yield = float(bond_nearby["close"].iloc[-1])
+        if bond_yield is None:
+            bond_yield = bond_fallback  # 历史数据不可用时用最新值兜底
+
         if bond_yield:
             erp = _compute_erp(pe, bond_yield)
             if erp is not None:
@@ -223,6 +258,7 @@ def _erp_history(days: int) -> dict:
                     "date": dt_str,
                     "erp": erp,
                     "pe": round(pe, 2),
+                    "bond_yield": round(bond_yield, 3),
                 })
 
     return {
@@ -231,6 +267,7 @@ def _erp_history(days: int) -> dict:
         "days": days,
         "samples": len(history),
         "as_of_date": date.today().isoformat(),
+        "note": "ERP历史使用对应日期的债券收益率（非固定最新值）",
         "history": history,
     }
 

@@ -50,19 +50,27 @@ def _yoy(code, as_of=None, lag=12):
         return None
 
 
-def _score_stock_bond() -> dict:
+def _score_stock_bond(as_of=None) -> dict:
     """股债相对强度 — 10Y国债收益率变化方向 vs 股市表现"""
     try:
         # 10Y 国债收益率 3个月变化（收益率上升=债跌）
-        bond_yoy = _yoy("CNG10Y") or _yoy("CNDT10Y")
+        bond_yoy = _yoy("CNG10Y", as_of=as_of) or _yoy("CNDT10Y", as_of=as_of)
         # 用 PE 作为股市 proxy（PE上升=估值扩张=股市好）
         from api.signals.pe import _load_pe_data
         pe = _load_pe_data()
         if pe is None or len(pe) < 63:
             return {"value": None, "sub_score": None}
 
-        pe_now = float(pe["pe"].iloc[-1])
-        pe_3m_ago = float(pe["pe"].iloc[-63]) if len(pe) >= 63 else pe_now
+        if as_of is not None and "date" in pe.columns:
+            pe["date"] = pd.to_datetime(pe["date"])
+            pe_nearby = pe[pe["date"] <= as_of]
+            if len(pe_nearby) < 63:
+                return {"value": None, "sub_score": None}
+            pe_now = float(pe_nearby["pe"].iloc[-1])
+            pe_3m_ago = float(pe_nearby["pe"].iloc[-63]) if len(pe_nearby) >= 63 else pe_now
+        else:
+            pe_now = float(pe["pe"].iloc[-1])
+            pe_3m_ago = float(pe["pe"].iloc[-63]) if len(pe) >= 63 else pe_now
         pe_change = round((pe_now / pe_3m_ago - 1) * 100, 2) if pe_3m_ago > 0 else 0
 
         # 股强（PE涨）+ 债弱（收益率升）= Risk On → 高分
@@ -80,10 +88,10 @@ def _score_stock_bond() -> dict:
         return {"value": None, "sub_score": None}
 
 
-def _score_gold_stock() -> dict:
+def _score_gold_stock(as_of=None) -> dict:
     """黄金/股票比 — 避险 vs 风险偏好"""
     try:
-        gold_change = _yoy("GOLD", lag=3)  # 3个月黄金变化
+        gold_change = _yoy("GOLD", as_of=as_of, lag=3)  # 3个月黄金变化
         # 黄金涨 + 股市弱 = Risk Off（避险）
         # 黄金跌 + 股市强 = Risk On
         from api.signals.pe import _load_pe_data
@@ -91,8 +99,16 @@ def _score_gold_stock() -> dict:
         if pe is None:
             return {"value": None, "sub_score": None}
 
-        pe_now = float(pe["pe"].iloc[-1])
-        pe_3m = float(pe["pe"].iloc[-63]) if len(pe) >= 63 else pe_now
+        if as_of is not None and "date" in pe.columns:
+            pe["date"] = pd.to_datetime(pe["date"])
+            pe_nearby = pe[pe["date"] <= as_of]
+            if len(pe_nearby) < 63:
+                return {"value": None, "sub_score": None}
+            pe_now = float(pe_nearby["pe"].iloc[-1])
+            pe_3m = float(pe_nearby["pe"].iloc[-63]) if len(pe_nearby) >= 63 else pe_now
+        else:
+            pe_now = float(pe["pe"].iloc[-1])
+            pe_3m = float(pe["pe"].iloc[-63]) if len(pe) >= 63 else pe_now
         stock_change = round((pe_now / pe_3m - 1) * 100, 2) if pe_3m > 0 else 0
 
         if gold_change is not None:
@@ -109,10 +125,10 @@ def _score_gold_stock() -> dict:
         return {"value": None, "sub_score": None}
 
 
-def _score_rmb_trend() -> dict:
+def _score_rmb_trend(as_of=None) -> dict:
     """人民币汇率趋势"""
     try:
-        rmb = _yoy("RMBUS", lag=3) or _yoy("CNYUSD", lag=3)
+        rmb = _yoy("RMBUS", as_of=as_of, lag=3) or _yoy("CNYUSD", as_of=as_of, lag=3)
         if rmb is None:
             return {"value": None, "sub_score": None}
         # 人民币升值（rmb负）=利好A股，贬值=利空
@@ -131,11 +147,42 @@ def _interpret(score):
     else: return "[算法输出] Risk On——风险资产全面占优"
 
 
+def _cross_asset_history(days: int) -> dict:
+    """跨资产比较历史序列（月频采样）"""
+    days = min(days, 365)
+    end = pd.Timestamp.now()
+    cursor = end - pd.Timedelta(days=days)
+
+    anchors = []
+    while cursor <= end:
+        anchors.append(cursor)
+        cursor += pd.Timedelta(days=30)
+
+    history = []
+    for a in anchors:
+        try:
+            s1 = _score_stock_bond(as_of=a)
+            s2 = _score_gold_stock(as_of=a)
+            s3 = _score_rmb_trend(as_of=a)
+            subs = {"stock_vs_bond": s1, "gold_vs_stock": s2, "rmb_trend": s3}
+            valid = [s["sub_score"] for s in subs.values() if s["sub_score"] is not None]
+            if len(valid) >= 2:
+                total = round(sum(valid) / len(valid) * 3 * 100, 1)
+                history.append({"date": a.strftime("%Y-%m-%d"), "score": total})
+        except Exception:
+            continue
+
+    return {
+        "indicator": "cross_asset", "range": "0-100", "days": days,
+        "samples": len(history), "as_of_date": date.today().isoformat(),
+        "history": history,
+    }
+
+
 def get_cross_asset(days: int = 0) -> dict:
     """跨资产比较分 0-100"""
     if days > 0:
-        return {"indicator": "cross_asset", "status": "not_implemented",
-                "note": "历史序列暂未实现", "history": []}
+        return _cross_asset_history(days)
 
     s1 = _score_stock_bond()
     s2 = _score_gold_stock()
