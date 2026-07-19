@@ -113,6 +113,14 @@ except ImportError:
     app = Flask(__name__)
 PROJECT_ROOT = Path(__file__).parent.parent
 
+# CORS 支持（仪表盘跨域访问）
+@app.after_request
+def _cors(response):
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "X-API-Key, Content-Type"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    return response
+
 # 启动时初始化数据库
 with app.app_context():
     init_db()
