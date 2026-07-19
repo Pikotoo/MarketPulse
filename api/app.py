@@ -72,6 +72,22 @@ from api.audit import audit_trail, init_audit_db
 from api.cache import init_cache_db
 from config import API_PORT, API_HOST, API_VERSION, DISCLAIMER
 
+# ── 日志 + 错误追踪 ────────────────────────────────────
+import logging, os as _os
+from pathlib import Path as _Path
+_log_dir = _Path(__file__).parent.parent / "data"
+_log_dir.mkdir(exist_ok=True)
+logging.basicConfig(
+    level=logging.WARNING,
+    format='[%(asctime)s] %(levelname)s: %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
+    handlers=[
+        logging.FileHandler(_log_dir / "error.log", encoding='utf-8'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger('marketpulse')
+
 # ── NumPy JSON 编码支持 (Flask 3.0+) ─────────────────────
 
 try:

@@ -58,6 +58,13 @@ docker-compose up -d
 # 访问 http://localhost:8898/dashboard
 ```
 
+### 生产部署 (gunicorn)
+
+```bash
+pip install gunicorn
+gunicorn -c deploy/gunicorn.conf.py api.app:app
+```
+
 ### 第一个请求
 
 ```bash
