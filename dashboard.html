@@ -102,16 +102,16 @@ body{background:#0f1119;color:#c9d1d9;font:13px/1.5 -apple-system,'Microsoft YaH
 .tab-btn.on{background:#5b8def;color:#fff}
 
 /* 行业热力图 */
-.sh-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;padding:8px 0}
-.sh-cell{border-radius:6px;padding:10px 4px;text-align:center;cursor:pointer;transition:transform .15s,box-shadow .15s;min-height:58px;display:flex;flex-direction:column;justify-content:center}
+.sh-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;padding:8px 0}
+.sh-cell{border-radius:8px;padding:12px 6px;text-align:center;cursor:pointer;transition:transform .15s,box-shadow .15s;min-height:64px;display:flex;flex-direction:column;justify-content:center}
 .sh-cell:hover{transform:scale(1.05);box-shadow:0 4px 16px rgba(0,0,0,.4);z-index:2;position:relative}
-.sh-cell .sn{font-size:10px;color:rgba(255,255,255,.85);font-weight:500;line-height:1.3;margin-bottom:2px}
-.sh-cell .sv{font-size:13px;color:#fff;font-weight:700;font-family:'Cascadia Code','JetBrains Mono','Consolas',monospace}
-.sh-sep{grid-column:1/-1;font-size:10px;color:#555;padding:8px 0 2px;text-transform:uppercase;letter-spacing:1px}
+.sh-cell .sn{font-size:11px;color:rgba(255,255,255,.85);font-weight:500;line-height:1.3;margin-bottom:3px}
+.sh-cell .sv{font-size:14px;color:#fff;font-weight:700;font-family:'Cascadia Code','JetBrains Mono','Consolas',monospace}
+.sh-sep{grid-column:1/-1;font-size:11px;color:#555;padding:10px 0 4px;text-transform:uppercase;letter-spacing:1px}
 .sector-legend{display:flex;gap:12px;justify-content:center;padding:8px;font-size:10px;color:#555;flex-wrap:wrap}
 .sector-legend span{display:flex;align-items:center;gap:4px}
 .sector-legend .dot{width:8px;height:8px;border-radius:2px}
-@media(max-width:768px){.sh-grid{grid-template-columns:repeat(4,1fr)}}
+@media(max-width:768px){.sh-grid{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:480px){.sh-grid{grid-template-columns:repeat(3,1fr)}}
 
 /* 免责 */
@@ -235,6 +235,7 @@ body{background:#0f1119;color:#c9d1d9;font:13px/1.5 -apple-system,'Microsoft YaH
     <span style="margin-left:12px">🔵=进攻型</span><span>🛡️=防御型</span><span>⚪=其他</span>
   </div>
 </div>
+<div class="ch" id="heatmapBox"><div class="ct">🔥 ECharts 热力图 · 红→绿渐变</div><div style="height:300px;margin:0 auto" id="heatmapChart"></div></div>
 <div class="grid" id="sectorGrid" style="grid-template-columns:repeat(3,1fr)"></div>
 
 <div class="ch" style="height:260px" id="heatmapChart"></div>
@@ -477,6 +478,7 @@ async function render(){
   try{
     var sectors=await _g('/api/v1/signal/sector-heatmap');
     renderSectorHeatmap(sectors);
+    renderEChartsHeatmap(sectors);  // ECharts渐变版
     // 行业明细
     var secs=(sectors.sectors||[]).sort(function(a,b){return b.momentum_60d-a.momentum_60d});
     var hmData=[],hmX=[],hmMax=0,hmMin=0;
@@ -644,6 +646,27 @@ function renderSectorHeatmap(data){
   });
   var gridEl=document.getElementById('sectorHeatmapGrid');
   if(gridEl)gridEl.innerHTML=html;
+}
+function renderEChartsHeatmap(data){
+  var sectors=data.sectors||[];
+  if(!sectors.length)return;
+  var el=document.getElementById('heatmapChart');
+  if(!el)return;
+  var chart=echarts.init(el);
+  var names=sectors.map(function(s){return s.name});
+  var values=sectors.map(function(s){return s.momentum_60d});
+  var mx=Math.max.apply(null,values.map(Math.abs));
+  chart.setOption({
+    tooltip:{formatter:function(p){return p.name+': '+p.value.toFixed(1)+'%'}},
+    grid:{left:100,right:60,top:8,bottom:24},
+    xAxis:{type:'value',axisLabel:{color:'#555',fontSize:10},splitLine:{lineStyle:{color:'#1e2130'}}},
+    yAxis:{type:'category',data:names,axisLabel:{color:'#8b8fa3',fontSize:10,inverse:true},axisLine:{lineStyle:{color:'#1e2130'}}},
+    visualMap:{orient:'vertical',right:4,top:'center',min:-mx,max:mx,inRange:{color:['#e55050','#f0a030','#f5d020','#5b8def','#10b981']},text:['↑','↓'],textStyle:{color:'#555',fontSize:10}},
+    series:[{type:'bar',data:values,barWidth:'60%',itemStyle:{borderRadius:[0,4,4,0]},
+      label:{show:true,position:'right',color:'#8b8fa3',fontSize:9,
+        formatter:function(p){return p.value.toFixed(1)+'%'}}
+    }]
+  });
 }
 function updateAiCtx(comp,pe,pan,reg,mac,vol,nb,margin){
   aiCtx={composite:comp.value,pePct:pe.percentile,pe:pe.value,panic:pan?pan.value:null,
